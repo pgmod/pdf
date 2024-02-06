@@ -173,7 +173,7 @@ func readPdfAndGetFirstPageAsText(fileName string) (totalPages int, content stri
 func Test_Dump(t *testing.T) {
 	
 	
-		testFile := "./testdata/error_pdf15_endless-loop_readObject.pdf"
+		testFile := "./testdatabugs/downloaded.pdf"
 		
 fmt.Println(". open testFile = ", testFile)
 		f, err := Open(testFile)
