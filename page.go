@@ -910,17 +910,17 @@ func (p Page) readContent(strm Value) Content {
 			g.Tm = g.Tlm
 
 		case "Tf": // set text font and size
-			if len(args) != 2 {
-				panic("bad TL")
-			}
-			f := args[0].Name()
-			g.Tf = p.Font(f)
-			enc = g.Tf.Encoder()
-			if enc == nil {
-				enc = &nopEncoder{}
-			}
-			g.Tfs = args[1].Float64()
 
+			if len(args) == 2 {	// bugfix: do not panic but silent discard
+			
+				f := args[0].Name()
+				g.Tf = p.Font(f)
+				enc = g.Tf.Encoder()
+				if enc == nil {
+					enc = &nopEncoder{}
+				}
+				g.Tfs = args[1].Float64()
+			}
 		case "\"": // set spacing, move to next line, and show text
 			if len(args) != 3 {
 				panic("bad \" operator")
