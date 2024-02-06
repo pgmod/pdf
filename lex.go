@@ -140,6 +140,11 @@ func (b *buffer) readToken() token {
 
 	// Find first non-space, non-comment byte.
 	c := b.readByte()
+	
+	if debug > 5 {
+		fmt.Println(".. readToken: ", c)
+	}
+	
 	for {
 		if isSpace(c) {	
 			if b.eof {	
@@ -423,10 +428,14 @@ type objdef struct {
 
 func (b *buffer) readObject() (object, error) {
 	tok := b.readToken()
-	if tok == io.EOF {	// bugfix: if not read from beginning than we may already at the end
+	if tok == io.EOF {	// bugfix: if reading not from beginning than we may already at the end
 		return nil, errors.New("io.EOF")
 	}
+
 	if kw, ok := tok.(keyword); ok {
+		if debug > 3 {
+			fmt.Println(".... readObject: kw = ", kw)
+		}
 		switch kw {
 		case "null":
 			return nil, nil
@@ -501,7 +510,8 @@ func (b *buffer) readDict() object {
 	x := make(dict)
 	for {
 		tok := b.readToken()
-		if tok == nil || tok == keyword(">>") {
+		
+		if tok == nil || tok == io.EOF || tok == keyword(">>") {
 			break
 		}
 		n, ok := tok.(name)

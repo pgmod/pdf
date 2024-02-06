@@ -76,6 +76,12 @@ import (
 	"strconv"
 )
 
+// for debugging
+// >1 page.go
+// >2 ps.go
+// >3 lex.go >4 readObject() <5 readToken()
+var debug int = 0
+
 // A Reader is a single PDF file open for reading.
 type Reader struct {
 	f          io.ReaderAt

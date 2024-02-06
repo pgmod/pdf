@@ -172,21 +172,21 @@ func readPdfAndGetFirstPageAsText(fileName string) (totalPages int, content stri
 //
 func Test_Dump(t *testing.T) {
 	
-	
-		testFile := "./testdatabugs/downloaded.pdf"
-		
-fmt.Println(". open testFile = ", testFile)
+	testFile := "./testdatabugs/downloaded.pdf"
+	if _, err := os.Stat("./testdatabugs/downloaded.pdf"); err == nil {
+
+		fmt.Println(". open testFile = ", testFile)
 		f, err := Open(testFile)
 		if err != nil {
 			t.Error(err)
 		}
 
 		totalPage := f.NumPage()
-fmt.Println(". totalPage = ", totalPage)
+		fmt.Println(". totalPage = ", totalPage)
 		
 		
 		for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
-fmt.Println(". pageIndex = ", pageIndex)
+			fmt.Println(". pageIndex = ", pageIndex)
 			var buf bytes.Buffer
 
 			p := f.Page(pageIndex)
@@ -217,10 +217,8 @@ fmt.Println(". pageIndex = ", pageIndex)
 		}
 		
 		// close
-		f.Close()
-		
-		
-		
+		f.Close()	
+	}
 }
 //
 // process all pdfs within ./testdata/*.pdf and write content to *.txt

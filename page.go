@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strings"
 )
-
 // A Page represent a single page in a PDF file.
 // The methods interpret a Page dictionary stored in V.
 type Page struct {
@@ -764,7 +763,9 @@ func (p Page) Content() Content {
 	var text []Text
 	var rect []Rect
 	
-	//fmt.Println("page=",p)
+	if debug > 1 {
+		fmt.Println("page=",p)
+	}
 	strm := p.V.Key("Contents")
 
 	if strm.Len() == 0 {
@@ -774,10 +775,12 @@ func (p Page) Content() Content {
 	} else {
 		for i := 0; i < strm.Len(); i++ {
 			strmindex := strm.Index(i)
-			//fmt.Println("stream ",i,"=",strmindex)
-
+			
+			if debug > 1 {
+				fmt.Println("stream ",i,"=",strmindex)
+			}
+			
 			c := p.readContent(strmindex)
-			//fmt.Println(c.Text)		
 			text = append(text, c.Text...)			
 			rect = append(rect, c.Rect...)
 		}	
@@ -826,12 +829,14 @@ func (p Page) readContent(strm Value) Content {
 		for i := n - 1; i >= 0; i-- {
 			args[i] = stk.Pop()
 		}
-
+		
+		if debug > 1 {
+			fmt.Println(".. readContent: ", n, op, args)
+		}
+		
 		switch op {
 		default:
-			// if DebugOn {
-			// 	fmt.Println(op, args)
-			// }
+		
 			return
 
 		case "cm": // update g.CTM
@@ -901,6 +906,7 @@ func (p Page) readContent(strm Value) Content {
 			}
 			g.Tl = -args[1].Float64()
 			fallthrough
+			
 		case "Td": // move text position
 			if len(args) != 2 {
 				panic("bad Td")
@@ -923,6 +929,7 @@ func (p Page) readContent(strm Value) Content {
 				}
 				g.Tfs = args[1].Float64()
 			}
+			
 		case "\"": // set spacing, move to next line, and show text
 			if len(args) != 3 {
 				panic("bad \" operator")
@@ -931,6 +938,7 @@ func (p Page) readContent(strm Value) Content {
 			g.Tc = args[1].Float64()
 			args = args[2:]
 			fallthrough
+			
 		case "'": // move to next line and show text
 			if len(args) != 1 {
 				panic("bad ' operator")
@@ -939,6 +947,7 @@ func (p Page) readContent(strm Value) Content {
 			g.Tlm = x.mul(g.Tlm)
 			g.Tm = g.Tlm
 			fallthrough
+			
 		case "Tj": // show text		
 			if len(args) == 1 {	// bugfix: do not panic but silent discard
 				

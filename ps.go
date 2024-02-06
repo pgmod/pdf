@@ -63,10 +63,18 @@ func Interpret(strm Value, do func(stk *Stack, op string)) {
 Reading:
 	for {
 		tok := b.readToken()
+		
+		if debug > 2 {
+			fmt.Println("... Interpret: tok = ", tok)
+		}
+		
 		if tok == io.EOF {
 			break
 		}		
 		if kw, ok := tok.(keyword); ok {
+			if debug > 2 {
+				fmt.Println("... Interpret: kw = ", kw)
+			}		
 			switch kw {
 			case "null", "[", "]", "<<", ">>":
 				break
@@ -117,9 +125,15 @@ Reading:
 				stk.Pop()
 				continue
 			}
-		}		
+		}
+		if debug > 2 {
+			fmt.Println("... unreadToken")
+		}
 		b.unreadToken(tok)
-		obj, err := b.readObject()	
+		obj, err := b.readObject()
+		if debug > 2 {
+			fmt.Println("... readObject", obj)
+		}
 		if err != nil {
 			return
 		}
