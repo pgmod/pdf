@@ -523,10 +523,10 @@ func (p Page) GetPlainText(fonts map[string]*Font) (result string, err error) {
 			}
 			fallthrough
 		case "Tj": // show text
-			if len(args) != 1 {
-				panic("bad Tj operator")
+			if len(args) == 1 {	// bugfix: do not panic but silent discard
+				
+				showText(args[0].RawString())
 			}
-			showText(args[0].RawString())
 		case "TJ": // show text, allowing individual glyph positioning
 			v := args[0]
 			for i := 0; i < v.Len(); i++ {
@@ -777,7 +777,8 @@ func (p Page) Content() Content {
 			//fmt.Println("stream ",i,"=",strmindex)
 
 			c := p.readContent(strmindex)
-			text = append(text, c.Text...)
+			//fmt.Println(c.Text)		
+			text = append(text, c.Text...)			
 			rect = append(rect, c.Rect...)
 		}	
 	}
@@ -813,7 +814,7 @@ func (p Page) readContent(strm Value) Content {
 
 			tx := w0/1000*g.Tfs + g.Tc
 			tx *= g.Th
-			g.Tm = matrix{{1, 0, 0}, {0, 1, 0}, {tx, 0, 1}}.mul(g.Tm)
+			g.Tm = matrix{{1, 0, 0}, {0, 1, 0}, {tx, 0, 1}}.mul(g.Tm)			
 		}
 	}
 
@@ -825,6 +826,7 @@ func (p Page) readContent(strm Value) Content {
 		for i := n - 1; i >= 0; i-- {
 			args[i] = stk.Pop()
 		}
+
 		switch op {
 		default:
 			// if DebugOn {
@@ -937,11 +939,11 @@ func (p Page) readContent(strm Value) Content {
 			g.Tlm = x.mul(g.Tlm)
 			g.Tm = g.Tlm
 			fallthrough
-		case "Tj": // show text
-			if len(args) != 1 {
-				panic("bad Tj operator")
+		case "Tj": // show text		
+			if len(args) == 1 {	// bugfix: do not panic but silent discard
+				
+				showText(args[0].RawString())
 			}
-			showText(args[0].RawString())
 
 		case "TJ": // show text, allowing individual glyph positioning
 			if len(args) > 0 {	// bugfix: don't raise an exception
