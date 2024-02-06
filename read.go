@@ -187,7 +187,16 @@ func NewReaderEncrypted(f io.ReaderAt, size int64, pw func() string) (*Reader, e
 	}
 	return nil, err
 }
-
+// Closer
+func (r *Reader) Close() (err error) {
+	if closer, ok:=r.f.(io.Closer); ok {
+	   err := closer.Close()
+		if err != nil {
+			return err
+		}	   
+	}
+	return nil
+}
 // Trailer returns the file's Trailer value.
 func (r *Reader) Trailer() Value {
 	if r == nil {

@@ -227,6 +227,7 @@ fmt.Println(". totalPage = ", totalPage)
 		
 		//
 		//fmt.Println(buf.String())
+		f.Close()
 		
 		//
 		// write bytes buffer to txt-file
