@@ -173,7 +173,7 @@ func readPdfAndGetFirstPageAsText(fileName string) (totalPages int, content stri
 func Test_Dump(t *testing.T) {
 	
 	testFile := "./testdatabugs/downloaded.pdf"
-	if _, err := os.Stat("./testdatabugs/downloaded.pdf"); err == nil {
+	if _, err := os.Stat(testFile); err == nil {
 
 		fmt.Println(". open testFile = ", testFile)
 		f, err := Open(testFile)

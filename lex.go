@@ -71,6 +71,7 @@ func (b *buffer) readByte() byte {
 	if b.pos >= len(b.buf) {
 		b.reload()
 		if b.pos >= len(b.buf) {
+			b.eof = true	// bugfix: '\n' has the meaning of EOF here evaluated at readToken
 			return '\n'
 		}
 	}
@@ -142,15 +143,16 @@ func (b *buffer) readToken() token {
 	c := b.readByte()
 	
 	if debug > 5 {
-		fmt.Println(".. readToken: ", c)
+		fmt.Println(".. readToken: ", b.eof, c)
 	}
 	
 	for {
 		if isSpace(c) {	
-			if b.eof {	
+			if b.eof {
 				return io.EOF
 			}
 			c = b.readByte()
+			
 		} else if c == '%' {
 			for c != '\r' && c != '\n' {
 				c = b.readByte()
@@ -441,7 +443,7 @@ func (b *buffer) readObject() (object, error) {
 			return nil, nil
 		case "<<":
 			return b.readDict(), nil
-		case "[":
+		case "[":	
 			return b.readArray(), nil
 		}
 		// b.errorf("unexpected keyword %q parsing object", kw)
@@ -493,7 +495,7 @@ func (b *buffer) readArray() object {
 	var x array
 	for {
 		tok := b.readToken()
-		if tok == nil || tok == keyword("]") {
+		if tok == nil || tok == io.EOF || tok == keyword("]") {
 			break
 		}
 		b.unreadToken(tok)

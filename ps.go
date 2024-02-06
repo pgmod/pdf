@@ -72,9 +72,7 @@ Reading:
 			break
 		}		
 		if kw, ok := tok.(keyword); ok {
-			if debug > 2 {
-				fmt.Println("... Interpret: kw = ", kw)
-			}		
+
 			switch kw {
 			case "null", "[", "]", "<<", ">>":
 				break
