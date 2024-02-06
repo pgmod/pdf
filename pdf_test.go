@@ -167,6 +167,62 @@ func readPdfAndGetFirstPageAsText(fileName string) (totalPages int, content stri
 	return totalPages, content
 }
 //
+// process file and output all
+// for debugging
+//
+func Test_Dump(t *testing.T) {
+	
+	
+		testFile := "./testdata/error_pdf15_endless-loop_readObject.pdf"
+		
+fmt.Println(". open testFile = ", testFile)
+		f, err := Open(testFile)
+		if err != nil {
+			t.Error(err)
+		}
+
+		totalPage := f.NumPage()
+fmt.Println(". totalPage = ", totalPage)
+		
+		
+		for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
+fmt.Println(". pageIndex = ", pageIndex)
+			var buf bytes.Buffer
+
+			p := f.Page(pageIndex)
+			if p.V.IsNull() {
+				continue
+			}
+			
+			texts := p.Content().Text
+			var lastY = 0.0
+			line := ""
+
+			for _, text := range texts {
+				if lastY != text.Y {
+					if lastY > 0 {
+						buf.WriteString(line + "\n")
+						line = text.S
+					} else {
+						line += text.S
+					}
+				} else {
+					line += text.S
+				}
+
+				lastY = text.Y
+			}
+			buf.WriteString(line)
+			fmt.Println(buf.String())
+		}
+		
+		// close
+		f.Close()
+		
+		
+		
+}
+//
 // process all pdfs within ./testdata/*.pdf and write content to *.txt
 //
 func Test_WalkDirectory_ReadPdfs(t *testing.T) {

@@ -65,7 +65,7 @@ Reading:
 		tok := b.readToken()
 		if tok == io.EOF {
 			break
-		}
+		}		
 		if kw, ok := tok.(keyword); ok {
 			switch kw {
 			case "null", "[", "]", "<<", ">>":
@@ -117,9 +117,9 @@ Reading:
 				stk.Pop()
 				continue
 			}
-		}
+		}		
 		b.unreadToken(tok)
-		obj, err := b.readObject()
+		obj, err := b.readObject()	
 		if err != nil {
 			return
 		}
