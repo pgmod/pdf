@@ -216,6 +216,9 @@ func Test_Dump(t *testing.T) {
 			fmt.Println(buf.String())
 		}
 		
+		// verdicts
+		fmt.Println("#verdicts = " + strconv.Itoa(len(verdicts)))
+		
 		// close
 		f.Close()	
 	}

@@ -81,6 +81,7 @@ import (
 // >2 ps.go
 // >3 lex.go >4 readObject() <5 readToken()
 var debug int = 0
+var verdicts []string
 
 // A Reader is a single PDF file open for reading.
 type Reader struct {
