@@ -392,7 +392,7 @@ func readCmap(toUnicode Value) *cmap {
 			stk.Pop().Name() // key
 			stk.Push(value)
 		default:
-			println("interp\t", op)
+			verdicts = append(verdicts, "readCmap: can't interpret op = " + op)
 		}
 	})
 	if !ok {
