@@ -164,6 +164,9 @@ func readPdfAndGetFirstPageAsText(fileName string) (totalPages int, content stri
 		content = strings.TrimSpace(buf.String())
 	}
 	
+	// close
+	f.Close()
+			
 	return totalPages, content
 }
 //
@@ -179,48 +182,49 @@ func Test_Dump(t *testing.T) {
 		f, err := Open(testFile)
 		if err != nil {
 			t.Error(err)
-		}
+		} else {
 
-		totalPage := f.NumPage()
-		fmt.Println(". totalPage = ", totalPage)
-		
-		
-		for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
-			fmt.Println(". pageIndex = ", pageIndex)
-			var buf bytes.Buffer
-
-			p := f.Page(pageIndex)
-			if p.V.IsNull() {
-				continue
-			}
+			totalPage := f.NumPage()
+			fmt.Println(". totalPage = ", totalPage)
 			
-			texts := p.Content().Text
-			var lastY = 0.0
-			line := ""
+			
+			for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
+				fmt.Println(". pageIndex = ", pageIndex)
+				var buf bytes.Buffer
 
-			for _, text := range texts {
-				if lastY != text.Y {
-					if lastY > 0 {
-						buf.WriteString(line + "\n")
-						line = text.S
+				p := f.Page(pageIndex)
+				if p.V.IsNull() {
+					continue
+				}
+				
+				texts := p.Content().Text
+				var lastY = 0.0
+				line := ""
+
+				for _, text := range texts {
+					if lastY != text.Y {
+						if lastY > 0 {
+							buf.WriteString(line + "\n")
+							line = text.S
+						} else {
+							line += text.S
+						}
 					} else {
 						line += text.S
 					}
-				} else {
-					line += text.S
-				}
 
-				lastY = text.Y
+					lastY = text.Y
+				}
+				buf.WriteString(line)
+				fmt.Println(buf.String())
 			}
-			buf.WriteString(line)
-			fmt.Println(buf.String())
+		
+			// verdicts
+			fmt.Println("#verdicts = " + strconv.Itoa(len(verdicts)))
+			
+			// close
+			f.Close()
 		}
-		
-		// verdicts
-		fmt.Println("#verdicts = " + strconv.Itoa(len(verdicts)))
-		
-		// close
-		f.Close()	
 	}
 }
 //
@@ -243,64 +247,65 @@ func Test_WalkDirectory_ReadPdfs(t *testing.T) {
 			continue
 		}
 		
-fmt.Println(". open testFile = ", testFile)
+		fmt.Println(". open testFile = ", testFile)
 		f, err := Open(testFile)
 		if err != nil {
 			t.Error(err)
-		}
+		} else {
 
-		totalPage := f.NumPage()
-fmt.Println(". totalPage = ", totalPage)
-		
-		var buf bytes.Buffer
-
-		for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
-		
-			p := f.Page(pageIndex)
-			if p.V.IsNull() {
-				continue
-			}
+			totalPage := f.NumPage()
+			fmt.Println(". totalPage = ", totalPage)
 			
-			texts := p.Content().Text
-			var lastY = 0.0
-			line := ""
+			var buf bytes.Buffer
 
-			for _, text := range texts {
-				if lastY != text.Y {
-					if lastY > 0 {
-						buf.WriteString(line + "\n")
-						line = text.S
+			for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
+			
+				p := f.Page(pageIndex)
+				if p.V.IsNull() {
+					continue
+				}
+				
+				texts := p.Content().Text
+				var lastY = 0.0
+				line := ""
+
+				for _, text := range texts {
+					if lastY != text.Y {
+						if lastY > 0 {
+							buf.WriteString(line + "\n")
+							line = text.S
+						} else {
+							line += text.S
+						}
 					} else {
 						line += text.S
 					}
-				} else {
-					line += text.S
-				}
 
-				lastY = text.Y
+					lastY = text.Y
+				}
+				buf.WriteString(line)
 			}
-			buf.WriteString(line)
+		
+			//
+			//fmt.Println(buf.String())
+			f.Close()
+		
+			//
+			// write bytes buffer to txt-file
+			writeToFileName := strings.Replace(testFile, ".pdf", ".txt", -1)
+			fmt.Println(".. writeToFileName = ", writeToFileName)
+			
+			fw, err := os.Create(writeToFileName)
+			if err != nil {
+				t.Error(err)
+			}
+			_, err = fw.WriteString(buf.String())
+			if err != nil {
+				t.Error(err)
+			}
+			
+			fw.Close()
 		}
-		
-		//
-		//fmt.Println(buf.String())
-		f.Close()
-		
-		//
-		// write bytes buffer to txt-file
-		writeToFileName := strings.Replace(testFile, ".pdf", ".txt", -1)
-		fmt.Println(".. writeToFileName = ", writeToFileName)
-		
-		fw, err := os.Create(writeToFileName)
-		if err != nil {
-			t.Error(err)
-		}
-		_, err = fw.WriteString(buf.String())
-		if err != nil {
-			t.Error(err)
-		}
-		
-		fw.Close()
 	}
 }
 //
