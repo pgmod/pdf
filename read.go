@@ -79,7 +79,7 @@ import (
 // for debugging
 // >1 page.go
 // >2 ps.go
-// >3 lex.go >4 readObject() <5 readToken()
+// >3 lex.go >4 readObject() >5 readToken() >6 readByte()
 var debug int = 0
 var verdicts []string
 
@@ -946,7 +946,7 @@ var passwordPad = []byte{
 
 func (r *Reader) initEncrypt(password string) error {
 	// See PDF 32000-1:2008, §7.6.
-	encrypt, _ := r.resolve(objptr{}, r.trailer["Encrypt"]).data.(dict)
+	encrypt, _ := r.resolve(objptr{}, r.trailer["Encrypt"]).data.(dict)	
 	if encrypt["Filter"] != name("Standard") {
 		return fmt.Errorf("unsupported PDF: encryption filter %v", objfmt(encrypt["Filter"]))
 	}
@@ -1092,9 +1092,15 @@ func cryptKey(key []byte, useAES bool, ptr objptr) []byte {
 }
 
 func decryptString(key []byte, useAES bool, ptr objptr, x string) string {
+	
 	key = cryptKey(key, useAES, ptr)
 	if useAES {
-		panic("AES not implemented")
+		cleartext, err := decryptCBC(key, []byte(x))
+		if err == nil {
+			x = string(cleartext)
+		} else {
+			verdicts = append(verdicts, "decryptString: " + err.Error())
+		}
 	} else {
 		c, _ := rc4.NewCipher(key)
 		data := []byte(x)
@@ -1105,6 +1111,7 @@ func decryptString(key []byte, useAES bool, ptr objptr, x string) string {
 }
 
 func decryptStream(key []byte, useAES bool, ptr objptr, rd io.Reader) io.Reader {
+
 	key = cryptKey(key, useAES, ptr)
 	if useAES {
 		cb, err := aes.NewCipher(key)
@@ -1141,4 +1148,20 @@ func (r *cbcReader) Read(b []byte) (n int, err error) {
 	n = copy(b, r.pend)
 	r.pend = r.pend[n:]
 	return n, nil
+}
+func decryptCBC(key, ciphertext []byte) (plaintext []byte, err error) {
+    var block cipher.Block
+    if block, err = aes.NewCipher(key); err != nil {
+        return
+    }
+    if len(ciphertext) < aes.BlockSize {
+        fmt.Println("ciphertext too short")
+        return
+    }
+    iv := ciphertext[:aes.BlockSize]
+    ciphertext = ciphertext[aes.BlockSize:]
+    cbc := cipher.NewCBCDecrypter(block, iv)
+    cbc.CryptBlocks(ciphertext, ciphertext)
+    plaintext = ciphertext
+    return
 }
