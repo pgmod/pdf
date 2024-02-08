@@ -943,25 +943,67 @@ var passwordPad = []byte{
 	0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA, 0x01, 0x08,
 	0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80, 0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A,
 }
-
+//
+// https://gendignoux.com/blog/2016/11/02/pdf-encryption.html
+//
+// Encryption was first introduced in version 1.1 of PDF. 
+// Initially, only the RC4 encryption algorithm was supported with keys of only 40 bits (because of export restrictions on cryptography at that time), 
+// but the key length was extended up to 128 bits in v1.4 and AES is supported since v1.6. 
+// The MD5 hash function is used in various algorithms, for example to derive cryptographic keys from passwords.
+// Encryption is defined in section 7.6 of the PDF reference and spans 15 pages. 
+// Encryption serves mainly two purposes in PDF:
+// - protecting private information;
+// - enforcing Digital Rights Management (DRM), i.e. to restrict available actions on a document (modifying, printing, etc.).
+//
+// https://www.pdflib.com/pdf-knowledge-base/pdf-password-security/encryption/
+// https://qpdf.readthedocs.io/en/stable/encryption.html
+// Version
+// V=1: The original algorithm, which encrypted files using 40-bit keys first introduced in PDF v1.1.
+// V=2: An extension of the original algorithm allowing longer keys. Introduced in PDF v1.4.
+// V=3: An unpublished algorithm that permits file encryption key lengths ranging from 40 to 128 bits. Introduced in PDF v1.4. qpdf is believed to be able to read files with V = 3 but does not write such files.
+// V=4: An extension of the algorithm that allows it to be parameterized by additional rules for handling strings and streams. Introduced in PDF v1.5.
+// V=5: An algorithm that allows specification of separate security handlers for strings and streams as well as embedded files, and which supports 256-bit keys. Introduced in PDF v1.7 extension level 3 and later extended in extension level 8. 
+//	This is the encryption system in the PDF v2.0 specification, ISO-32000.
+//
+// Revision vs. Expected Version
+// R=2	V must be 1
+// R=3	V must be 2 or 3
+// R=4	V must be 4
+// R=5	V must be 5; this extension was never fully specified and existed for a short time in some versions of Acrobat. qpdf is able to read and write this format, but it should not be used for any purpose other than testing compatibility with the format.
+// R=6	V must be 5. This is the only value that is not deprecated in the PDF 2.0 specification, ISO-32000.
+//
 func (r *Reader) initEncrypt(password string) error {
+
 	// See PDF 32000-1:2008, §7.6.
 	encrypt, _ := r.resolve(objptr{}, r.trailer["Encrypt"]).data.(dict)	
 	if encrypt["Filter"] != name("Standard") {
 		return fmt.Errorf("unsupported PDF: encryption filter %v", objfmt(encrypt["Filter"]))
 	}
+	
+	// version
+	V, _ := encrypt["V"].(int64)
+	if V != 1 && V != 2 && (V != 4 || !okayV4(encrypt)) {
+		return fmt.Errorf("unsupported PDF: encryption version V=%d", V)
+		//fmt.Errorf("encryption obj: %v", objfmt(encrypt))
+	}
+
+	// revision
+	R, _ := encrypt["R"].(int64)	// revision
+	if R < 2 {
+		return fmt.Errorf("malformed PDF: encryption revision R=%d", R)
+	}
+	if R > 4 {
+		return fmt.Errorf("unsupported PDF: encryption revision R=%d", R)
+	}
+	
 	n, _ := encrypt["Length"].(int64)
 	if n == 0 {
 		n = 40
 	}
-	if n%8 != 0 || n < 40 || n > 256 {
+	if n%8 != 0 || n < 40 || n > 128 {
 		return fmt.Errorf("malformed PDF: %d-bit encryption key", n)
 	}
-	V, _ := encrypt["V"].(int64)
-	if V != 1 && V != 2 && (V != 4 || !okayV4and5(encrypt)) && (V != 5 || !okayV4and5(encrypt)) {
-		return fmt.Errorf("unsupported PDF: encryption version V=%d; %v", V, objfmt(encrypt))
-	}
-
+	
 	ids, ok := r.trailer["ID"].(array)
 	if !ok || len(ids) < 1 {
 		return fmt.Errorf("malformed PDF: missing ID in trailer")
@@ -970,21 +1012,16 @@ func (r *Reader) initEncrypt(password string) error {
 	if !ok {
 		return fmt.Errorf("malformed PDF: missing ID in trailer")
 	}
-	ID := []byte(idstr)
-
-	R, _ := encrypt["R"].(int64)
-	if R < 2 {
-		return fmt.Errorf("malformed PDF: encryption revision R=%d", R)
-	}
-	if R > 4 {
-		return fmt.Errorf("unsupported PDF: encryption revision R=%d", R)
-	}
-	O, _ := encrypt["O"].(string)
-	U, _ := encrypt["U"].(string)
-	if len(O) != 32 || len(U) != 32 {
+	ID := []byte(idstr)	// some document-level random value
+	
+	O, _ := encrypt["O"].(string)	// a checksum of the owner password
+	U, _ := encrypt["U"].(string)	// a checksum of the user password
+	// R4: O=U=32, R6: O=U=127
+	if (len(O) != 32 || len(U) != 32) && 
+		(len(O) != 127 || len(U) != 127) {
 		return fmt.Errorf("malformed PDF: missing O= or U= encryption parameters")
 	}
-	p, _ := encrypt["P"].(int64)
+	p, _ := encrypt["P"].(int64)	// the permission flags
 	P := uint32(p)
 
 	// TODO: Password should be converted to Latin-1.
@@ -1052,7 +1089,8 @@ func (r *Reader) initEncrypt(password string) error {
 
 var ErrInvalidPassword = fmt.Errorf("encrypted PDF: invalid password")
 
-func okayV4and5(encrypt dict) bool {
+func okayV4(encrypt dict) bool {
+
 	cf, ok := encrypt["CF"].(dict)
 	if !ok {
 		return false
@@ -1075,7 +1113,7 @@ func okayV4and5(encrypt dict) bool {
 	if cfparam["Length"] != nil && cfparam["Length"] != int64(16) {
 		return false
 	}
-	if cfparam["CFM"] != name("AESV2") {
+	if cfparam["CFM"] != name("AESV2") {		
 		return false
 	}
 	return true
