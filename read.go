@@ -178,7 +178,7 @@ func NewReaderEncrypted(f io.ReaderAt, size int64, pw func() string) (*Reader, e
 	}
 	err = r.initEncrypt("")
 	if err == nil {
-		return r, nil
+		return r, err
 	}
 	if pw == nil || err != ErrInvalidPassword {
 		return nil, err
@@ -954,11 +954,11 @@ func (r *Reader) initEncrypt(password string) error {
 	if n == 0 {
 		n = 40
 	}
-	if n%8 != 0 || n > 128 || n < 40 {
+	if n%8 != 0 || n < 40 || n > 256 {
 		return fmt.Errorf("malformed PDF: %d-bit encryption key", n)
 	}
 	V, _ := encrypt["V"].(int64)
-	if V != 1 && V != 2 && (V != 4 || !okayV4(encrypt)) {
+	if V != 1 && V != 2 && (V != 4 || !okayV4and5(encrypt)) && (V != 5 || !okayV4and5(encrypt)) {
 		return fmt.Errorf("unsupported PDF: encryption version V=%d; %v", V, objfmt(encrypt))
 	}
 
@@ -1052,7 +1052,7 @@ func (r *Reader) initEncrypt(password string) error {
 
 var ErrInvalidPassword = fmt.Errorf("encrypted PDF: invalid password")
 
-func okayV4(encrypt dict) bool {
+func okayV4and5(encrypt dict) bool {
 	cf, ok := encrypt["CF"].(dict)
 	if !ok {
 		return false
