@@ -175,21 +175,21 @@ func readPdfAndGetFirstPageAsText(fileName string) (totalPages int, content stri
 //
 func Test_Dump(t *testing.T) {
 	
-	testFile := "./testdatabugs/downloaded.pdf"
+	//testFile := "./testdatabugs/downloaded.pdf"
+	testFile := "./testdatabugs/error_pdf16_AESV2.pdf"
 	if _, err := os.Stat(testFile); err == nil {
 
-		fmt.Println(". open testFile = ", testFile)
+		fmt.Println(". open testFile = " + testFile)
 		f, err := Open(testFile)
 		if err != nil {
 			t.Error(err)
 		} else {
 
 			totalPage := f.NumPage()
-			fmt.Println(". totalPage = ", totalPage)
-			
+			fmt.Println(". totalPage = " + strconv.Itoa(totalPage))
 			
 			for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
-				fmt.Println(". pageIndex = ", pageIndex)
+				fmt.Println(". pageIndex = "  + strconv.Itoa(pageIndex))
 				var buf bytes.Buffer
 
 				p := f.Page(pageIndex)
@@ -216,12 +216,22 @@ func Test_Dump(t *testing.T) {
 					lastY = text.Y
 				}
 				buf.WriteString(line)
-				fmt.Println(buf.String())
+//				fmt.Println(buf.String())
+				fmt.Println(". buf.Len() = " + strconv.Itoa(buf.Len()))
+				
 			}
-		
-			// verdicts
-			fmt.Println("#verdicts = " + strconv.Itoa(len(verdicts)))
 			
+			// version
+			fmt.Println(". version = " + f.Version())
+
+/*			
+			// verdicts
+			verdicts = f.Verdicts()
+			fmt.Println(". verdicts = " + strconv.Itoa(len(verdicts)))
+			for i:=0; i< len(verdicts); i++ {
+				fmt.Println(verdicts[i])
+			}
+*/			
 			// close
 			f.Close()
 		}
