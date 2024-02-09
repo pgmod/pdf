@@ -105,7 +105,7 @@ func (r *Reader) errorf(format string, args ...interface{}) {
 }
 // Open opens a file for reading.
 func Open(file string) (*Reader, error) {
-	// TODO: Deal with closing file.
+
 	f, err := os.Open(file)
 	if err != nil {
 		f.Close()
@@ -181,16 +181,16 @@ func NewReaderEncrypted(f io.ReaderAt, size int64, pw func() string) (*Reader, e
 	pos := end - endChunk + int64(i)
 	b := newBuffer(io.NewSectionReader(f, pos, end-pos), pos)
 	if b.readToken() != keyword("startxref") {
-		return nil, fmt.Errorf("malformed PDF file: missing startxref")
+		return r, fmt.Errorf("malformed PDF file: missing startxref")
 	}
 	startxref, ok := b.readToken().(int64)
 	if !ok {
-		return nil, fmt.Errorf("malformed PDF file: startxref not followed by integer")
+		return r, fmt.Errorf("malformed PDF file: startxref not followed by integer")
 	}
 	b = newBuffer(io.NewSectionReader(r.f, startxref, r.end-startxref), startxref)
 	xref, trailerptr, trailer, err := readXref(r, b)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 	r.xref = xref
 	r.trailer = trailer
@@ -202,8 +202,9 @@ func NewReaderEncrypted(f io.ReaderAt, size int64, pw func() string) (*Reader, e
 	if err == nil {
 		return r, err
 	}
+	
 	if pw == nil || err != ErrInvalidPassword {
-		return nil, err
+		return r, err
 	}
 	for {
 		next := pw()
@@ -214,7 +215,7 @@ func NewReaderEncrypted(f io.ReaderAt, size int64, pw func() string) (*Reader, e
 			return r, nil
 		}
 	}
-	return nil, err
+	return r, err
 }
 // Trailer returns the file's Trailer value.
 func (r *Reader) Trailer() Value {
