@@ -969,7 +969,6 @@ var passwordPad = []byte{
 // V=1: Introduced in PDF v1.1. Using RC4 encryption algorithm using 40-bit keys (because of export restrictions on cryptography at that time).
 // V=2: Introduced in PDF v1.4. An extension of the original algorithm allowing longer keys up to 128 bits.
 // V=3: Introduced in PDF v1.4. An unpublished algorithm that permits file encryption key lengths ranging from 40 to 128 bits.  
-//	qpdf is believed to be able to read files but does not write such files.
 // V=4: Introduced in PDF v1.5. An extension of the algorithm that allows it to be parameterized by additional rules for handling strings and streams. AES is supported since PDF v1.6.
 // V=5: Introduced in PDF v1.7 extension level 3. An algorithm that allows specification of separate security handlers for strings and streams as well as embedded files, and which supports 256-bit keys. This is the encryption system in the PDF v2.0 specification, ISO-32000.
 //
@@ -978,13 +977,7 @@ var passwordPad = []byte{
 // R=3	V must be 2 or 3
 // R=4	V must be 4
 // R=5	V must be 5. This extension was never fully specified and existed for a short time in some versions of Acrobat. 
-//	qpdf is able to read and write this format, but it should not be used for any purpose other than testing compatibility with the format.
 // R=6	V must be 5. This is the only value that is not deprecated in the PDF 2.0 specification, ISO-32000.
-//
-//
-// implementation examples
-// https://github.com/seehuhn/go-pdf/blob/main/crypto.go
-// https://github.com/pdfcpu/pdfcpu/blob/master/pkg/pdfcpu/crypto.go
 //
 func (r *Reader) initEncrypt(password string) error {
 

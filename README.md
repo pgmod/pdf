@@ -2,15 +2,24 @@
 
 A simple Go library which enables reading PDF files. 
 
-This repository contains merged code from https://github.com/rsc/pdf and https://github.com/ledongthuc/pdf
+This repository contains merged code from https://github.com/rsc/pdf and https://github.com/ledongthuc/pdf and https://github.com/dslipak/pdf.
+Added bugfixs and stabilize error handling.
 
 Features
-  - Get plain text content (without formatting)
-  - Get Content (including all font and formatting information)
+  - Get plain text content with and without font and formatting information.
+  
+TODO
+  - include encryption for PDF V5 R6 (SHA=256)
+  - review available go implementations and decide which one is to go best with:
+	  - https://github.com/seehuhn/go-pdf
+	  - https://github.com/EndFirstCorp/pdflib
+	  - https://github.com/KarmaPenny/pdfparser
+	  - https://github.com/pdfcpu/pdfcpu
+
 
 ## Install:
 
-`go get -u github.com/dslipak/pdf`
+`go get -u github.com/mazeforgit/pdf`
 
 
 ## Read plain text
@@ -21,115 +30,67 @@ package main
 import (
 	"bytes"
 	"fmt"
-
-	"github.com/dslipak/pdf"
-)
-
-func main() {
-	pdf.DebugOn = true
-	content, err := readPdf("test.pdf") // Read local pdf file
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(content)
-	return
-}
-
-func readPdf(path string) (string, error) {
-	f, r, err := pdf.Open(path)
-	// remember close file
-    defer f.Close()
-	if err != nil {
-		return "", err
-	}
-	var buf bytes.Buffer
-    b, err := r.GetPlainText()
-    if err != nil {
-        return "", err
-    }
-    buf.ReadFrom(b)
-	return buf.String(), nil
-}
-```
-
-## Read all text with styles from PDF
-
-```golang
-func readPdf2(path string) (string, error) {
-	f, r, err := pdf.Open(path)
-	// remember close file
-	defer f.Close()
-	if err != nil {
-		return "", err
-	}
-	totalPage := r.NumPage()
-
-	for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
-		p := r.Page(pageIndex)
-		if p.V.IsNull() {
-			continue
-		}
-		var lastTextStyle pdf.Text
-		texts := p.Content().Text
-		for _, text := range texts {
-			if isSameSentence(text, lastTextStyle) {
-				lastTextStyle.S = lastTextStyle.S + text.S
-			} else {
-				fmt.Printf("Font: %s, Font-size: %f, x: %f, y: %f, content: %s \n", lastTextStyle.Font, lastTextStyle.FontSize, lastTextStyle.X, lastTextStyle.Y, lastTextStyle.S)
-				lastTextStyle = text
-			}
-		}
-	}
-	return "", nil
-}
-```
-
-
-## Read text grouped by rows
-
-```golang
-package main
-
-import (
-	"fmt"
 	"os"
+	"strconv"
 
-	"github.com/dslipak/pdf"
+	"github.com/mazeforgit/pdf"
 )
 
 func main() {
-	content, err := readPdf(os.Args[1]) // Read local pdf file
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(content)
-	return
-}
 
-func readPdf(path string) (string, error) {
-	f, r, err := pdf.Open(path)
-	defer func() {
-		_ = f.Close()
-	}()
+	fmt.Println(". open testFile = " + testFile)
+	f, err := Open(testFile)
 	if err != nil {
-		return "", err
+		os.Exit(-1)
 	}
-	totalPage := r.NumPage()
-
+	
+	totalPage := f.NumPage()
+	fmt.Println(". totalPage = " + strconv.Itoa(totalPage))
+	
 	for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
-		p := r.Page(pageIndex)
+		fmt.Println(". pageIndex = "  + strconv.Itoa(pageIndex))
+		var buf bytes.Buffer
+
+		p := f.Page(pageIndex)
 		if p.V.IsNull() {
 			continue
 		}
+		
+		texts := p.Content().Text
+		var lastY = 0.0
+		line := ""
 
-		rows, _ := p.GetTextByRow()
-		for _, row := range rows {
-		    println(">>>> row: ", row.Position)
-		    for _, word := range row.Content {
-		        fmt.Println(word.S)
-		    }
+		for _, text := range texts {
+			if lastY != text.Y {
+				if lastY > 0 {
+					buf.WriteString(line + "\n")
+					line = text.S
+				} else {
+					line += text.S
+				}
+			} else {
+				line += text.S
+			}
+
+			lastY = text.Y
 		}
+		
+		// page content
+		fmt.Println(buf.String())
+		fmt.Println(". buf.Len() = " + strconv.Itoa(buf.Len()))
 	}
-	return "", nil
+	
+	// version
+	fmt.Println(". version = " + f.Version())
+	
+	// verdicts
+	verdicts = f.Verdicts()
+	fmt.Println(". verdicts = " + strconv.Itoa(len(verdicts)))
+	for i:=0; i< len(verdicts); i++ {
+		fmt.Println(verdicts[i])
+	}
+
+	// close
+	f.Close()
 }
 ```

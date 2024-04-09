@@ -28,6 +28,72 @@ TEST
 SUBTITLE`
 
 //
+// process file and output all
+// for debugging
+//
+func Test_selectedFile(t *testing.T) {
+	
+	testFile := "./testdatabugs/error_pdf17_endless-loop.pdf"
+	if _, err := os.Stat(testFile); err == nil {
+
+		fmt.Println(". open testFile = " + testFile)
+		f, err := Open(testFile)
+		if err != nil {
+			t.Error(err)
+		} else {
+
+			totalPage := f.NumPage()
+			fmt.Println(". totalPage = " + strconv.Itoa(totalPage))
+			
+			for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
+				fmt.Println(". pageIndex = "  + strconv.Itoa(pageIndex))
+				var buf bytes.Buffer
+
+				p := f.Page(pageIndex)
+				if p.V.IsNull() {
+					continue
+				}
+				
+				texts := p.Content().Text
+				var lastY = 0.0
+				line := ""
+
+				for _, text := range texts {
+					if lastY != text.Y {
+						if lastY > 0 {
+							buf.WriteString(line + "\n")
+							line = text.S
+						} else {
+							line += text.S
+						}
+					} else {
+						line += text.S
+					}
+
+					lastY = text.Y
+				}
+				buf.WriteString(line)
+				fmt.Println(". buf.Len() = " + strconv.Itoa(buf.Len()))
+				fmt.Println(buf.String())
+				
+			}
+			
+			// version
+			fmt.Println(". version = " + f.Version())
+		
+			// verdicts
+			verdicts = f.Verdicts()
+			fmt.Println(". verdicts = " + strconv.Itoa(len(verdicts)))
+			for i:=0; i< len(verdicts); i++ {
+				fmt.Println(verdicts[i])
+			}
+			
+			// close
+			f.Close()
+		}
+	}
+}
+//
 // this pdf has an object within stream which is handled different!
 // the original implementation calculated the stream but didn't returned the object at resolve
 //
@@ -125,119 +191,6 @@ func Test_ReadPdf_v17_MinSizeNoPDFA_2trailer(t *testing.T) {
 	}
 }
 //
-// read pdf and return content of first page for quick check
-//
-func readPdfAndGetFirstPageAsText(fileName string) (totalPages int, content string) {
-	fmt.Println("read file = " + fileName)
-	
-	f, err := Open(fileName)
-	if err != nil {
-		return 0, err.Error()
-	}
-
-	totalPages = f.NumPage()
-	if totalPages == 0 {
-		return totalPages, content
-	} else {
-	
-		var buf bytes.Buffer
-		p := f.Page(1)
-		texts := p.Content().Text
-		var lastY = 0.0
-		line := ""
-
-		for _, text := range texts {
-			if lastY != text.Y {
-				if lastY > 0 {
-					buf.WriteString(line + "\n")
-					line = text.S
-				} else {
-					line += text.S
-				}
-			} else {
-				line += text.S
-			}
-
-			lastY = text.Y
-		}
-		buf.WriteString(line)
-		content = strings.TrimSpace(buf.String())
-	}
-	
-	// close
-	f.Close()
-			
-	return totalPages, content
-}
-//
-// process file and output all
-// for debugging
-//
-func Test_Dump(t *testing.T) {
-	
-	//testFile := "./testdatabugs/downloaded.pdf"
-	testFile := "./testdatabugs/error_pdf16_AESV2.pdf"
-	if _, err := os.Stat(testFile); err == nil {
-
-		fmt.Println(". open testFile = " + testFile)
-		f, err := Open(testFile)
-		if err != nil {
-			t.Error(err)
-		} else {
-
-			totalPage := f.NumPage()
-			fmt.Println(". totalPage = " + strconv.Itoa(totalPage))
-			
-			for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
-				fmt.Println(". pageIndex = "  + strconv.Itoa(pageIndex))
-				var buf bytes.Buffer
-
-				p := f.Page(pageIndex)
-				if p.V.IsNull() {
-					continue
-				}
-				
-				texts := p.Content().Text
-				var lastY = 0.0
-				line := ""
-
-				for _, text := range texts {
-					if lastY != text.Y {
-						if lastY > 0 {
-							buf.WriteString(line + "\n")
-							line = text.S
-						} else {
-							line += text.S
-						}
-					} else {
-						line += text.S
-					}
-
-					lastY = text.Y
-				}
-				buf.WriteString(line)
-//				fmt.Println(buf.String())
-				fmt.Println(". buf.Len() = " + strconv.Itoa(buf.Len()))
-				
-			}
-			
-			// version
-			fmt.Println(". version = " + f.Version())
-
-/*			
-			// verdicts
-			verdicts = f.Verdicts()
-			fmt.Println(". verdicts = " + strconv.Itoa(len(verdicts)))
-			for i:=0; i< len(verdicts); i++ {
-				fmt.Println(verdicts[i])
-			}
-*/			
-			// close
-			f.Close()
-		}
-	}
-}
-//
 // process all pdfs within ./testdata/*.pdf and write content to *.txt
 //
 func Test_WalkDirectory_ReadPdfs(t *testing.T) {
@@ -331,4 +284,49 @@ func walkDir(root, fileSuffix string) ([]string, error) {
         return nil
     })
     return files, err
+}
+//
+// read pdf and return content of first page for quick check
+//
+func readPdfAndGetFirstPageAsText(fileName string) (totalPages int, content string) {
+	fmt.Println("read file = " + fileName)
+	
+	f, err := Open(fileName)
+	if err != nil {
+		return 0, err.Error()
+	}
+
+	totalPages = f.NumPage()
+	if totalPages == 0 {
+		return totalPages, content
+	} else {
+	
+		var buf bytes.Buffer
+		p := f.Page(1)
+		texts := p.Content().Text
+		var lastY = 0.0
+		line := ""
+
+		for _, text := range texts {
+			if lastY != text.Y {
+				if lastY > 0 {
+					buf.WriteString(line + "\n")
+					line = text.S
+				} else {
+					line += text.S
+				}
+			} else {
+				line += text.S
+			}
+
+			lastY = text.Y
+		}
+		buf.WriteString(line)
+		content = strings.TrimSpace(buf.String())
+	}
+	
+	// close
+	f.Close()
+			
+	return totalPages, content
 }
