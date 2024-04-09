@@ -2,7 +2,7 @@
 
 A simple Go library which enables reading PDF files. 
 
-This repository contains merged code from https://github.com/rsc/pdf and https://github.com/ledongthuc/pdf and https://github.com/dslipak/pdf.
+This repository contains merged code from https://github.com/rsc/pdf and https://github.com/ledongthuc/pdf and https://github.com/dslipak/pdf.  
 Added bugfixs and stabilize error handling.
 
 Features
@@ -38,6 +38,9 @@ import (
 
 func main() {
 
+	testFile := "./testdata/story_Word2019-2312-1712620132_SaveAs-Standard-PDFA__pdf17_trailer.pdf"
+	
+	// open file
 	fmt.Println(". open testFile = " + testFile)
 	f, err := Open(testFile)
 	if err != nil {
@@ -90,7 +93,7 @@ func main() {
 		fmt.Println(verdicts[i])
 	}
 
-	// close
+	// close file
 	f.Close()
 }
 ```
