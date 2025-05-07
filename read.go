@@ -4,7 +4,7 @@
 
 // Package pdf implements reading of PDF files.
 //
-// Overview
+// # Overview
 //
 // PDF is Adobe's Portable Document Format, ubiquitous on the internet.
 // A PDF document is a complex data format built on a fairly simple structure.
@@ -43,7 +43,6 @@
 // they are implemented only in terms of the Value API and could be moved outside
 // the package. Equally important, traversal of other PDF data structures can be implemented
 // in other packages as needed.
-//
 package pdf
 
 // BUG(rsc): The package is incomplete, although it has been used successfully on some
@@ -82,15 +81,15 @@ var verdicts []string
 
 // A Reader is a single PDF file open for reading.
 type Reader struct {
-	f         	io.ReaderAt
-	end        	int64
-	xref       	[]xref
-	trailer    	dict
-	trailerptr 	objptr
-	key        	[]byte
-	useAES     	bool
-	version		string
-	encryption	string
+	f          io.ReaderAt
+	end        int64
+	xref       []xref
+	trailer    dict
+	trailerptr objptr
+	key        []byte
+	useAES     bool
+	version    string
+	encryption string
 }
 
 type xref struct {
@@ -103,6 +102,7 @@ type xref struct {
 func (r *Reader) errorf(format string, args ...interface{}) {
 	panic(fmt.Errorf(format, args...))
 }
+
 // Open opens a file for reading.
 func Open(file string) (*Reader, error) {
 
@@ -118,13 +118,14 @@ func Open(file string) (*Reader, error) {
 	}
 	return NewReader(f, fi.Size())
 }
+
 // Close close the reader using closer.
 func (r *Reader) Close() (err error) {
-	if closer, ok:=r.f.(io.Closer); ok {
-	   err := closer.Close()
+	if closer, ok := r.f.(io.Closer); ok {
+		err := closer.Close()
 		if err != nil {
 			return err
-		}	   
+		}
 	}
 	return nil
 }
@@ -140,6 +141,7 @@ func (r *Reader) Version() (v string) {
 func (r *Reader) Verdicts() []string {
 	return verdicts
 }
+
 // NewReader opens a file for reading, using the data in f with the given total size.
 func NewReader(f io.ReaderAt, size int64) (*Reader, error) {
 	return NewReaderEncrypted(f, size, nil)
@@ -150,7 +152,31 @@ func NewReader(f io.ReaderAt, size int64) (*Reader, error) {
 // to try. If pw returns the empty string, NewReaderEncrypted stops trying to decrypt
 // the file and returns an error.
 func NewReaderEncrypted(f io.ReaderAt, size int64, pw func() string) (*Reader, error) {
-	
+
+	originalReader := f
+	data := make([]byte, size)
+	originalReader.ReadAt(data, 0)
+	dataPartsStart := bytes.Split(data, []byte("%PDF-1."))
+	if len(dataPartsStart) < 2 {
+		return nil, fmt.Errorf("not a PDF file: invalid header(PDF-1.x)")
+	}
+	dataPartsEnd := bytes.Split(dataPartsStart[1], []byte("%%EOF"))
+	if len(dataPartsEnd) < 1 {
+		return nil, fmt.Errorf("not a PDF file: invalid header(EOF)")
+	}
+	pdfData := []byte("%PDF-1.")
+	// pdfData = append(pdfData, dataPartsStart[1]...)
+	pdfData = append(pdfData, dataPartsEnd[0]...)
+	pdfData = append(pdfData, []byte("%%EOF")...)
+
+	// pdfData := dataPartsStart[1]
+	// pdfData = append(pdfData, dataPartsEnd[0]...)
+	// pdfData = append(, pdfData...)
+	// pdfData = append(pdfData, []byte("%%EOF")...)
+
+	f = bytes.NewReader(pdfData)
+	size = int64(len(pdfData))
+
 	buf := make([]byte, 10)
 	f.ReadAt(buf, 0)
 	if !bytes.HasPrefix(buf, []byte("%PDF-1.")) || buf[7] < '0' || buf[7] > '7' || buf[8] != '\r' && buf[8] != '\n' {
@@ -174,8 +200,8 @@ func NewReaderEncrypted(f io.ReaderAt, size int64, pw func() string) (*Reader, e
 	}
 
 	r := &Reader{
-		f:   f,
-		end: end,
+		f:       f,
+		end:     end,
 		version: version,
 	}
 	pos := end - endChunk + int64(i)
@@ -202,7 +228,7 @@ func NewReaderEncrypted(f io.ReaderAt, size int64, pw func() string) (*Reader, e
 	if err == nil {
 		return r, err
 	}
-	
+
 	if pw == nil || err != ErrInvalidPassword {
 		return r, err
 	}
@@ -217,6 +243,7 @@ func NewReaderEncrypted(f io.ReaderAt, size int64, pw func() string) (*Reader, e
 	}
 	return r, err
 }
+
 // Trailer returns the file's Trailer value.
 func (r *Reader) Trailer() Value {
 	if r == nil {
@@ -476,13 +503,16 @@ func readXrefTableData(b *buffer, table []xref) ([]xref, error) {
 
 func findLastLine(buf []byte, s string) int {
 	bs := []byte(s)
+	// fmt.Println("bs", len(bs))
 	max := len(buf)
 	for {
 		i := bytes.LastIndex(buf[:max], bs)
 		if i <= 0 || i+len(bs) >= len(buf) {
 			return -1
 		}
+		// fmt.Println("found line", string(buf[i-1:i+len(bs)]))
 		if (buf[i-1] == '\n' || buf[i-1] == '\r') && (buf[i+len(bs)] == '\n' || buf[i+len(bs)] == '\r') {
+			// fmt.Println("return", i)
 			return i
 		}
 		max = i
@@ -651,7 +681,7 @@ func (v Value) RawString() string {
 	return x
 }
 
-// Text returns v's string value interpreted as a ``text string'' (defined in the PDF spec)
+// Text returns v's string value interpreted as a “text string” (defined in the PDF spec)
 // and converted to UTF-8.
 // If v.Kind() != String, Text returns the empty string.
 func (v Value) Text() string {
@@ -755,13 +785,13 @@ func (v Value) Len() int {
 	}
 	return len(x)
 }
-//
+
 // resolve xrefs
+//
 //	in: the parent and the key or reference to resolve
 //	out: the reference
 //
-//	bugfix: in case the object-ref is within a stream than nothing was returned 
-//
+//	bugfix: in case the object-ref is within a stream than nothing was returned
 func (r *Reader) resolve(parent objptr, x interface{}) Value {
 
 	if ptr, ok := x.(objptr); ok {
@@ -775,7 +805,7 @@ func (r *Reader) resolve(parent objptr, x interface{}) Value {
 		// var obj object
 		if xref.inStream {
 			strm := r.resolve(parent, xref.stream)
-			
+
 		Search:
 			for {
 				if strm.Kind() != Stream {
@@ -857,7 +887,7 @@ func (e *errorReadCloser) Close() error {
 
 // Reader returns the data contained in the stream v.
 // If v.Kind() != Stream, Reader returns a ReadCloser that
-// responds to all reads with a ``stream not present'' error.
+// responds to all reads with a “stream not present” error.
 func (v Value) Reader() io.ReadCloser {
 	x, ok := v.data.(stream)
 	if !ok {
@@ -956,11 +986,11 @@ var passwordPad = []byte{
 	0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA, 0x01, 0x08,
 	0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80, 0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A,
 }
-//
+
 // https://www.pdflib.com/pdf-knowledge-base/pdf-password-security/encryption/
 // https://qpdf.readthedocs.io/en/stable/encryption.html
 //
-// Encryption is defined in section 7.6 of the PDF reference. 
+// Encryption is defined in section 7.6 of the PDF reference.
 // Encryption serves mainly two purposes in PDF:
 // - protecting private information;
 // - enforcing Digital Rights Management (DRM), i.e. to restrict available actions on a document (modifying, printing, etc.).
@@ -968,7 +998,7 @@ var passwordPad = []byte{
 // Version
 // V=1: Introduced in PDF v1.1. Using RC4 encryption algorithm using 40-bit keys (because of export restrictions on cryptography at that time).
 // V=2: Introduced in PDF v1.4. An extension of the original algorithm allowing longer keys up to 128 bits.
-// V=3: Introduced in PDF v1.4. An unpublished algorithm that permits file encryption key lengths ranging from 40 to 128 bits.  
+// V=3: Introduced in PDF v1.4. An unpublished algorithm that permits file encryption key lengths ranging from 40 to 128 bits.
 // V=4: Introduced in PDF v1.5. An extension of the algorithm that allows it to be parameterized by additional rules for handling strings and streams. AES is supported since PDF v1.6.
 // V=5: Introduced in PDF v1.7 extension level 3. An algorithm that allows specification of separate security handlers for strings and streams as well as embedded files, and which supports 256-bit keys. This is the encryption system in the PDF v2.0 specification, ISO-32000.
 //
@@ -976,30 +1006,29 @@ var passwordPad = []byte{
 // R=2	V must be 1
 // R=3	V must be 2 or 3
 // R=4	V must be 4
-// R=5	V must be 5. This extension was never fully specified and existed for a short time in some versions of Acrobat. 
+// R=5	V must be 5. This extension was never fully specified and existed for a short time in some versions of Acrobat.
 // R=6	V must be 5. This is the only value that is not deprecated in the PDF 2.0 specification, ISO-32000.
-//
 func (r *Reader) initEncrypt(password string) error {
 
 	// See PDF 32000-1:2008, §7.6.
-	encrypt, _ := r.resolve(objptr{}, r.trailer["Encrypt"]).data.(dict)	
+	encrypt, _ := r.resolve(objptr{}, r.trailer["Encrypt"]).data.(dict)
 	if encrypt["Filter"] != name("Standard") {
 		return fmt.Errorf("unsupported PDF: encryption filter %v", encrypt["Filter"])
 	}
-	
+
 	// revision
-	R, _ := encrypt["R"].(int64)	// revision
+	R, _ := encrypt["R"].(int64) // revision
 	if R < 2 {
 		return fmt.Errorf("malformed PDF: encryption revision R=%d", R)
 	}
 	if R > 4 {
 		return fmt.Errorf("unsupported PDF: encryption revision R=%d", R)
 	}
-	
+
 	// version
 	V, _ := encrypt["V"].(int64)
 	r.encryption = fmt.Sprintf("V=%d, R=%d", V, R)
-	
+
 	if V != 1 && V != 2 && (V != 4 || !r.okayV4(encrypt)) {
 		return fmt.Errorf("unsupported PDF: encryption version V=%d", V)
 		//fmt.Errorf("encryption obj: %v", objfmt(encrypt))
@@ -1013,7 +1042,7 @@ func (r *Reader) initEncrypt(password string) error {
 		return fmt.Errorf("malformed PDF: %d-bit encryption key", n)
 	}
 	r.encryption += fmt.Sprintf(", key-length=%d", n)
-	
+
 	ids, ok := r.trailer["ID"].(array)
 	if !ok || len(ids) < 1 {
 		return fmt.Errorf("malformed PDF: missing ID in trailer")
@@ -1022,16 +1051,16 @@ func (r *Reader) initEncrypt(password string) error {
 	if !ok {
 		return fmt.Errorf("malformed PDF: missing ID in trailer")
 	}
-	ID := []byte(idstr)	// some document-level random value
-	
-	O, _ := encrypt["O"].(string)	// a checksum of the owner password
-	U, _ := encrypt["U"].(string)	// a checksum of the user password
+	ID := []byte(idstr) // some document-level random value
+
+	O, _ := encrypt["O"].(string) // a checksum of the owner password
+	U, _ := encrypt["U"].(string) // a checksum of the user password
 	// R4: O=U=32, R6: O=U=127
-	if (len(O) != 32 || len(U) != 32) && 
+	if (len(O) != 32 || len(U) != 32) &&
 		(len(O) != 127 || len(U) != 127) {
 		return fmt.Errorf("malformed PDF: missing O= or U= encryption parameters")
 	}
-	p, _ := encrypt["P"].(int64)	// the permission flags
+	p, _ := encrypt["P"].(int64) // the permission flags
 	P := uint32(p)
 
 	// TODO: Password should be converted to Latin-1.
@@ -1120,16 +1149,16 @@ func (r *Reader) okayV4(encrypt dict) bool {
 	if cfparam["AuthEvent"] != nil && cfparam["AuthEvent"] != name("DocOpen") {
 		return false
 	}
-	if cfparam["CFM"].(name) != name("AESV2") {		
+	if cfparam["CFM"].(name) != name("AESV2") {
 		return false
 	}
 	r.encryption += fmt.Sprintf(", CFM=%v", cfparam["CFM"])
-	
+
 	if cfparam["Length"] != nil && cfparam["Length"] != int64(16) {
 		return false
 	}
 	r.encryption += fmt.Sprintf(", length=%v", cfparam["Length"])
-	
+
 	return true
 }
 
@@ -1144,14 +1173,14 @@ func cryptKey(key []byte, useAES bool, ptr objptr) []byte {
 }
 
 func decryptString(key []byte, useAES bool, ptr objptr, x string) string {
-	
+
 	key = cryptKey(key, useAES, ptr)
 	if useAES {
 		cleartext, err := decryptCBC(key, []byte(x))
 		if err == nil {
 			x = string(cleartext)
 		} else {
-			verdicts = append(verdicts, "decryptString: " + err.Error())
+			verdicts = append(verdicts, "decryptString: "+err.Error())
 		}
 	} else {
 		c, _ := rc4.NewCipher(key)
@@ -1202,18 +1231,18 @@ func (r *cbcReader) Read(b []byte) (n int, err error) {
 	return n, nil
 }
 func decryptCBC(key, ciphertext []byte) (plaintext []byte, err error) {
-    var block cipher.Block
-    if block, err = aes.NewCipher(key); err != nil {
-        return
-    }
-    if len(ciphertext) < aes.BlockSize {
-        fmt.Println("ciphertext too short")
-        return
-    }
-    iv := ciphertext[:aes.BlockSize]
-    ciphertext = ciphertext[aes.BlockSize:]
-    cbc := cipher.NewCBCDecrypter(block, iv)
-    cbc.CryptBlocks(ciphertext, ciphertext)
-    plaintext = ciphertext
-    return
+	var block cipher.Block
+	if block, err = aes.NewCipher(key); err != nil {
+		return
+	}
+	if len(ciphertext) < aes.BlockSize {
+		fmt.Println("ciphertext too short")
+		return
+	}
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
+	cbc := cipher.NewCBCDecrypter(block, iv)
+	cbc.CryptBlocks(ciphertext, ciphertext)
+	plaintext = ciphertext
+	return
 }

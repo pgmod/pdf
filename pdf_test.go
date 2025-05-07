@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
-	"path/filepath"
 )
 
 var referenceFirstPage = `TEST FILE 
@@ -27,12 +27,10 @@ erat, sed diam voluptua. At vero eos et accusam et
 TEST 
 SUBTITLE`
 
-//
 // process file and output all
 // for debugging
-//
 func Test_selectedFile(t *testing.T) {
-	
+
 	testFile := "./testdatabugs/error_pdf17_endless-loop.pdf"
 	if _, err := os.Stat(testFile); err == nil {
 
@@ -44,16 +42,16 @@ func Test_selectedFile(t *testing.T) {
 
 			totalPage := f.NumPage()
 			fmt.Println(". totalPage = " + strconv.Itoa(totalPage))
-			
+
 			for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
-				fmt.Println(". pageIndex = "  + strconv.Itoa(pageIndex))
+				fmt.Println(". pageIndex = " + strconv.Itoa(pageIndex))
 				var buf bytes.Buffer
 
 				p := f.Page(pageIndex)
 				if p.V.IsNull() {
 					continue
 				}
-				
+
 				texts := p.Content().Text
 				var lastY = 0.0
 				line := ""
@@ -75,30 +73,29 @@ func Test_selectedFile(t *testing.T) {
 				buf.WriteString(line)
 				fmt.Println(". buf.Len() = " + strconv.Itoa(buf.Len()))
 				fmt.Println(buf.String())
-				
+
 			}
-			
+
 			// version
 			fmt.Println(". version = " + f.Version())
-		
+
 			// verdicts
 			verdicts = f.Verdicts()
 			fmt.Println(". verdicts = " + strconv.Itoa(len(verdicts)))
-			for i:=0; i< len(verdicts); i++ {
+			for i := 0; i < len(verdicts); i++ {
 				fmt.Println(verdicts[i])
 			}
-			
+
 			// close
 			f.Close()
 		}
 	}
 }
-//
+
 // this pdf has an object within stream which is handled different!
 // the original implementation calculated the stream but didn't returned the object at resolve
 //
 // @todo: there is an empty line added, still don't know where
-//
 func Test_ReadPdf_v17_linarized_xrefStream(t *testing.T) {
 
 	testFile := "./testdata/story_Word2019-2312-1601712620132-32_Print-Adobe__pdf15_linarized_xrefStream.pdf"
@@ -123,13 +120,16 @@ func Test_ReadPdf_v17_linarized_xref(t *testing.T) {
 		t.Error(content)
 	}
 }
-//
+
 // this pdf has an array of refs at /Contents
-//	standard:
-// page = {<</Contents 4 0 R /Group <</CS /DeviceRGB /S /Transparency /Type /Group>> /MediaBox [0 0 612 792] /Parent 2 0 R /Resources <</ExtGState <</GS7 7 0 R /GS8 8 0 R>> /Font <</F1 5 0 R /F2 9 0 R /F3 11 0 R>> /ProcSet [/PDF /Text /ImageB /ImageC /ImageI]>> /StructParents 0 /Type /Page>>}
-//	deviation:
-// page = {<</Contents [20 0 R] /CropBox [0 0 595.32001 841.92004] /MediaBox [0 0 595.32001 841.92004] /Parent 2 0 R /Resources 21 0 R /Rotate 0 /Type /Page>>}
 //
+//	standard:
+//
+// page = {<</Contents 4 0 R /Group <</CS /DeviceRGB /S /Transparency /Type /Group>> /MediaBox [0 0 612 792] /Parent 2 0 R /Resources <</ExtGState <</GS7 7 0 R /GS8 8 0 R>> /Font <</F1 5 0 R /F2 9 0 R /F3 11 0 R>> /ProcSet [/PDF /Text /ImageB /ImageC /ImageI]>> /StructParents 0 /Type /Page>>}
+//
+//	deviation:
+//
+// page = {<</Contents [20 0 R] /CropBox [0 0 595.32001 841.92004] /MediaBox [0 0 595.32001 841.92004] /Parent 2 0 R /Resources 21 0 R /Rotate 0 /Type /Page>>}
 func Test_ReadPdf_v17_trailer_arrayAtPageContents(t *testing.T) {
 
 	testFile := "./testdata/story_Word2019-2312-1712620132_Print-Microsoft__pdf17_trailer_array-at-page-contents.pdf"
@@ -190,26 +190,25 @@ func Test_ReadPdf_v17_MinSizeNoPDFA_2trailer(t *testing.T) {
 		t.Error(content)
 	}
 }
-//
+
 // process all pdfs within ./testdata/*.pdf and write content to *.txt
-//
 func Test_WalkDirectory_ReadPdfs(t *testing.T) {
-	
+
 	// get files
 	var startPath string = "./testdata"
 	files, err := walkDir(startPath, ".pdf")
 	if err != nil {
-        t.Error("Assert: " + err.Error())
-    }
-	
+		t.Error("Assert: " + err.Error())
+	}
+
 	// read files
-	for i:=0; i<len(files); i++ {
-		
+	for i := 0; i < len(files); i++ {
+
 		testFile := files[i]
 		if !strings.HasSuffix(testFile, ".pdf") {
 			continue
 		}
-		
+
 		fmt.Println(". open testFile = ", testFile)
 		f, err := Open(testFile)
 		if err != nil {
@@ -218,16 +217,16 @@ func Test_WalkDirectory_ReadPdfs(t *testing.T) {
 
 			totalPage := f.NumPage()
 			fmt.Println(". totalPage = ", totalPage)
-			
+
 			var buf bytes.Buffer
 
 			for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
-			
+
 				p := f.Page(pageIndex)
 				if p.V.IsNull() {
 					continue
 				}
-				
+
 				texts := p.Content().Text
 				var lastY = 0.0
 				line := ""
@@ -248,16 +247,16 @@ func Test_WalkDirectory_ReadPdfs(t *testing.T) {
 				}
 				buf.WriteString(line)
 			}
-		
+
 			//
 			//fmt.Println(buf.String())
 			f.Close()
-		
+
 			//
 			// write bytes buffer to txt-file
 			writeToFileName := strings.Replace(testFile, ".pdf", ".txt", -1)
 			fmt.Println(".. writeToFileName = ", writeToFileName)
-			
+
 			fw, err := os.Create(writeToFileName)
 			if err != nil {
 				t.Error(err)
@@ -266,31 +265,40 @@ func Test_WalkDirectory_ReadPdfs(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			
+
 			fw.Close()
 		}
 	}
 }
-//
-// walk indicated directory and 
-// return all file.names with indicated suffix
-//
-func walkDir(root, fileSuffix string) ([]string, error) {
-    var files []string
-    err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-        if !info.IsDir() && strings.HasSuffix(path, fileSuffix) {
-            files = append(files, path)
-        }
-        return nil
-    })
-    return files, err
+
+func TestReadPdf_vith_sign_in_start(t *testing.T) {
+
+	testFile := "./testdata/test.pdf"
+	totalPages, content := readPdfAndGetFirstPageAsText(testFile)
+	if totalPages == 0 {
+		t.Error(content)
+	}
+
+	fmt.Println(content)
 }
-//
+
+// walk indicated directory and
+// return all file.names with indicated suffix
+func walkDir(root, fileSuffix string) ([]string, error) {
+	var files []string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() && strings.HasSuffix(path, fileSuffix) {
+			files = append(files, path)
+		}
+		return nil
+	})
+	return files, err
+}
+
 // read pdf and return content of first page for quick check
-//
 func readPdfAndGetFirstPageAsText(fileName string) (totalPages int, content string) {
 	fmt.Println("read file = " + fileName)
-	
+
 	f, err := Open(fileName)
 	if err != nil {
 		return 0, err.Error()
@@ -300,7 +308,7 @@ func readPdfAndGetFirstPageAsText(fileName string) (totalPages int, content stri
 	if totalPages == 0 {
 		return totalPages, content
 	} else {
-	
+
 		var buf bytes.Buffer
 		p := f.Page(1)
 		texts := p.Content().Text
@@ -324,9 +332,9 @@ func readPdfAndGetFirstPageAsText(fileName string) (totalPages int, content stri
 		buf.WriteString(line)
 		content = strings.TrimSpace(buf.String())
 	}
-	
+
 	// close
 	f.Close()
-			
+
 	return totalPages, content
 }

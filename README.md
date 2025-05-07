@@ -19,7 +19,7 @@ TODO
 
 ## Install:
 
-`go get -u github.com/mazeforgit/pdf`
+`go get -u github.com/pgmod/pdf`
 
 
 ## Read plain text
@@ -33,7 +33,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/mazeforgit/pdf"
+	"github.com/pgmod/pdf"
 )
 
 func main() {
